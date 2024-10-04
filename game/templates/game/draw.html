@@ -2,9 +2,53 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>그림 그리기 게임</title>
 </head>
 <body>
+    <h1>그림을 그려보세요!</h1>
+    <canvas id="drawingCanvas" width="500" height="500" style="border:1px solid #000;"></canvas>
+    <button id="submitBtn">제출</button>
 
+    <script>
+        let canvas = document.getElementById('drawingCanvas');
+        let ctx = canvas.getContext('2d');
+        let drawing = false;
+
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mousemove', draw);
+
+        function startDrawing(e) {
+            drawing = true;
+            ctx.beginPath();
+            ctx.moveTo(e.offsetX, e.offsetY);
+        }
+
+        function stopDrawing() {
+            drawing = false;
+        }
+
+        function draw(e) {
+            if (!drawing) return;
+            ctx.lineTo(e.offsetX, e.offsetY);
+            ctx.stroke();
+        }
+
+        document.getElementById('submitBtn').addEventListener('click', function() {
+            let imageData = canvas.toDataURL('image/png');
+            fetch('/game/submit-drawing/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({ image_data: imageData })
+            }).then(response => response.json())
+              .then(data => {
+                  alert(`유사율: ${data.similarity}%`);
+              });
+        });
+    </script>
 </body>
 </html>
