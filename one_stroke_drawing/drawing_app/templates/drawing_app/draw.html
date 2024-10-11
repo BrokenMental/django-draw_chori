@@ -1,0 +1,47 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>한 붓 그리기</title>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+</head>
+<body>
+    <div class="drawing-instructions">
+        <h2>한 붓 그리기 챌린지</h2>
+        <p>아래 예시 그림을 따라 그려보세요. 손을 떼지 않고 한 번에 그리는 것이 목표입니다!</p>
+    </div>
+
+    <div id="drawing-container">
+        <canvas id="background-canvas"></canvas>
+        <canvas id="drawing-canvas"></canvas>
+    </div>
+
+    <div class="controls">
+        <button id="clear-btn">다시하기</button>
+    </div>
+
+    <div id="popup" style="display: none;">
+        <h2>축하합니다!</h2>
+        <p>유사도: <span id="similarity"></span>%</p>
+        <form id="contact-form">
+            <input type="text" id="phone" placeholder="연락처를 입력하세요">
+            <button type="submit">저장</button>
+        </form>
+    </div>
+
+    <!-- 이미지 URL을 JavaScript로 전달 -->
+    {% if template and template.image %}
+    <script>
+        var templateImageUrl = "{{ template.image.url }}";
+    </script>
+    {% else %}
+    <script>
+        var templateImageUrl = null;
+    </script>
+    {% endif %}
+
+    <script src="{% static 'js/drawing.js' %}"></script>
+</body>
+</html>
