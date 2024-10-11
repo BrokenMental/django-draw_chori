@@ -4,7 +4,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const backgroundCanvas = document.getElementById('background-canvas');
     const bgCtx = backgroundCanvas.getContext('2d');
 
-    // 캔버스 크기 설정
+    let isDrawing = false;
+    let hasLifted = false;
+    let lastX = 0;
+    let lastY = 0;
+
     function setCanvasSize() {
         const container = document.getElementById('drawing-container');
         const width = container.offsetWidth;
@@ -14,71 +18,48 @@ document.addEventListener('DOMContentLoaded', function() {
         drawingCanvas.height = height;
         backgroundCanvas.width = width;
         backgroundCanvas.height = height;
+
+        // 캔버스 초기화 시 흰색 배경 설정
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, width, height);
+
+        // 기본 그리기 설정
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = 8;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
     }
 
-    setCanvasSize();
-    window.addEventListener('resize', setCanvasSize);
+    function getMousePos(canvas, evt) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
 
-    // 예시 이미지 로드 및 표시
-    function loadTemplateImage() {
-        if (window.templateImageUrl) {
-            const img = new Image();
-            img.src = window.templateImageUrl;
-            img.onload = function() {
-                const scale = Math.min(
-                    backgroundCanvas.width / img.width,
-                    backgroundCanvas.height / img.height
-                );
-                const x = (backgroundCanvas.width - img.width * scale) / 2;
-                const y = (backgroundCanvas.height - img.height * scale) / 2;
-
-                bgCtx.globalAlpha = 0.3;
-                bgCtx.drawImage(img, x, y, img.width * scale, img.height * scale);
-
-                bgCtx.globalAlpha = 1;
-                bgCtx.strokeStyle = '#ddd';
-                bgCtx.lineWidth = 2;
-                bgCtx.strokeRect(0, 0, backgroundCanvas.width, backgroundCanvas.height);
-            }
-            img.onerror = function() {
-                console.error('이미지 로드 실패:', window.templateImageUrl);
-            }
-        }
+        return {
+            x: (evt.clientX - rect.left) * scaleX,
+            y: (evt.clientY - rect.top) * scaleY
+        };
     }
-
-    let isDrawing = false;
-    let hasLifted = false;
-    let startX, startY;
-
-    drawingCanvas.addEventListener('mousedown', startDrawing);
-    drawingCanvas.addEventListener('mousemove', draw);
-    drawingCanvas.addEventListener('mouseup', stopDrawing);
-    drawingCanvas.addEventListener('mouseout', stopDrawing);
 
     function startDrawing(e) {
         isDrawing = true;
-        const rect = drawingCanvas.getBoundingClientRect();
-        startX = e.clientX - rect.left;
-        startY = e.clientY - rect.top;
+        const pos = getMousePos(drawingCanvas, e);
+        lastX = pos.x;
+        lastY = pos.y;
 
         ctx.beginPath();
-        ctx.moveTo(startX, startY);
-
-        ctx.strokeStyle = '#000';
-        ctx.lineWidth = 3;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
+        ctx.moveTo(lastX, lastY);
     }
 
     function draw(e) {
         if (!isDrawing) return;
 
-        const rect = drawingCanvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-
-        ctx.lineTo(x, y);
+        const pos = getMousePos(drawingCanvas, e);
+        ctx.lineTo(pos.x, pos.y);
         ctx.stroke();
+
+        lastX = pos.x;
+        lastY = pos.y;
     }
 
     function stopDrawing() {
@@ -89,6 +70,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         isDrawing = false;
     }
+
+    drawingCanvas.addEventListener('mousedown', startDrawing);
+    drawingCanvas.addEventListener('mousemove', draw);
+    drawingCanvas.addEventListener('mouseup', stopDrawing);
+    drawingCanvas.addEventListener('mouseout', stopDrawing);
 
     function compareDrawing() {
         const loadingDiv = document.createElement('div');
@@ -126,6 +112,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     document.getElementById('clear-btn').addEventListener('click', function() {
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, drawingCanvas.width, drawingCanvas.height);
         ctx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
         hasLifted = false;
         document.getElementById('popup').style.display = 'none';
@@ -144,6 +132,30 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         return cookieValue;
+    }
+
+    // 예시 이미지 로드 및 표시 함수 수정
+    function loadTemplateImage() {
+        if (window.templateImageUrl) {
+            const img = new Image();
+            img.src = window.templateImageUrl;
+            img.onload = function() {
+                const scale = Math.min(
+                    backgroundCanvas.width / img.width,
+                    backgroundCanvas.height / img.height
+                );
+                const x = (backgroundCanvas.width - img.width * scale) / 2;
+                const y = (backgroundCanvas.height - img.height * scale) / 2;
+
+                // 배경을 흰색으로 설정
+                bgCtx.fillStyle = 'white';
+                bgCtx.fillRect(0, 0, backgroundCanvas.width, backgroundCanvas.height);
+
+                // 이미지를 더 흐리게 표시
+                bgCtx.globalAlpha = 0.2;  // 0.3에서 0.2로 변경
+                bgCtx.drawImage(img, x, y, img.width * scale, img.height * scale);
+            }
+        }
     }
 
     loadTemplateImage();
