@@ -2,6 +2,8 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <title>한 붓 그리기</title>
     <link rel="stylesheet" href="{% static 'css/styles.css' %}">
 </head>
@@ -28,6 +30,17 @@
             <button type="submit">저장</button>
         </form>
     </div>
+
+    <!-- 이미지 URL을 JavaScript로 전달 -->
+    {% if template and template.image %}
+    <script>
+        var templateImageUrl = "{{ template.image.url }}";
+    </script>
+    {% else %}
+    <script>
+        var templateImageUrl = null;
+    </script>
+    {% endif %}
 
     <script src="{% static 'js/drawing.js' %}"></script>
 </body>

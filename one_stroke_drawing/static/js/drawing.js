@@ -21,30 +21,34 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 예시 이미지 로드 및 표시
     function loadTemplateImage() {
-        const img = new Image();
-        img.src = '{{ template.image.url }}';
-        img.onload = function() {
-            // 이미지를 캔버스 크기에 맞게 조정하여 그리기
-            const scale = Math.min(
-                backgroundCanvas.width / img.width,
-                backgroundCanvas.height / img.height
-            );
-            const x = (backgroundCanvas.width - img.width * scale) / 2;
-            const y = (backgroundCanvas.height - img.height * scale) / 2;
+        if (window.templateImageUrl) {
+            const img = new Image();
+            img.src = window.templateImageUrl;
+            img.onload = function() {
+                const scale = Math.min(
+                    backgroundCanvas.width / img.width,
+                    backgroundCanvas.height / img.height
+                );
+                const x = (backgroundCanvas.width - img.width * scale) / 2;
+                const y = (backgroundCanvas.height - img.height * scale) / 2;
 
-            bgCtx.globalAlpha = 0.3;  // 투명도 설정
-            bgCtx.drawImage(img, x, y, img.width * scale, img.height * scale);
+                bgCtx.globalAlpha = 0.3;
+                bgCtx.drawImage(img, x, y, img.width * scale, img.height * scale);
 
-            // 캔버스 테두리 표시
-            bgCtx.globalAlpha = 1;
-            bgCtx.strokeStyle = '#ddd';
-            bgCtx.lineWidth = 2;
-            bgCtx.strokeRect(0, 0, backgroundCanvas.width, backgroundCanvas.height);
+                bgCtx.globalAlpha = 1;
+                bgCtx.strokeStyle = '#ddd';
+                bgCtx.lineWidth = 2;
+                bgCtx.strokeRect(0, 0, backgroundCanvas.width, backgroundCanvas.height);
+            }
+            img.onerror = function() {
+                console.error('이미지 로드 실패:', window.templateImageUrl);
+            }
         }
     }
 
     let isDrawing = false;
     let hasLifted = false;
+    let startX, startY;
 
     drawingCanvas.addEventListener('mousedown', startDrawing);
     drawingCanvas.addEventListener('mousemove', draw);
@@ -54,10 +58,12 @@ document.addEventListener('DOMContentLoaded', function() {
     function startDrawing(e) {
         isDrawing = true;
         const rect = drawingCanvas.getBoundingClientRect();
-        ctx.beginPath();
-        ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+        startX = e.clientX - rect.left;
+        startY = e.clientY - rect.top;
 
-        // 그리기 스타일 설정
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+
         ctx.strokeStyle = '#000';
         ctx.lineWidth = 3;
         ctx.lineCap = 'round';
@@ -68,7 +74,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!isDrawing) return;
 
         const rect = drawingCanvas.getBoundingClientRect();
-        ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        ctx.lineTo(x, y);
         ctx.stroke();
     }
 
@@ -76,16 +85,21 @@ document.addEventListener('DOMContentLoaded', function() {
         if (isDrawing && !hasLifted) {
             isDrawing = false;
             hasLifted = true;
-            showPopup();
+            compareDrawing();
         }
         isDrawing = false;
     }
 
-    function showPopup() {
-        // 팝업 표시 로직
-        const drawingData = drawingCanvas.toDataURL();
+    function compareDrawing() {
+        const loadingDiv = document.createElement('div');
+        loadingDiv.className = 'loading';
+        loadingDiv.textContent = '분석 중...';
+        document.body.appendChild(loadingDiv);
 
-        fetch('/save/', {
+        const drawingData = drawingCanvas.toDataURL();
+        console.log("Drawing data length:", drawingData.length);  // 디버깅용
+
+        fetch('/save_drawing/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
@@ -93,20 +107,30 @@ document.addEventListener('DOMContentLoaded', function() {
             },
             body: `drawing_data=${encodeURIComponent(drawingData)}`
         })
-        .then(response => response.json())
+        .then(response => {
+            console.log("Response status:", response.status);  // 디버깅용
+            return response.json();
+        })
         .then(data => {
+            console.log("Similarity data:", data);  // 디버깅용
             document.getElementById('similarity').textContent = data.similarity;
             document.getElementById('popup').style.display = 'block';
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('오류가 발생했습니다. 다시 시도해주세요.');
+        })
+        .finally(() => {
+            document.body.removeChild(loadingDiv);
         });
     }
 
-    // 다시하기 버튼
     document.getElementById('clear-btn').addEventListener('click', function() {
         ctx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
         hasLifted = false;
+        document.getElementById('popup').style.display = 'none';
     });
 
-    // CSRF 토큰 가져오기
     function getCookie(name) {
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {
